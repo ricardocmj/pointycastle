@@ -173,3 +173,18 @@ class ECSignature implements Signature {
     return r.hashCode + s.hashCode;
   }
 }
+
+/// A [Signature] created with ECC.
+class ECRecoverableSignature extends ECSignature {
+  final int v;
+
+  ECRecoverableSignature(r, s, this.v) : super(r, s);
+
+  String toString() => "(${r.toString()},${s.toString()},${v.toString()})";
+
+  bool operator ==(other) {
+    if (other == null) return false;
+    if (other is! ECRecoverableSignature) return false;
+    return (other.r == this.r) && (other.s == this.s) && (other.v == this.v);
+  }
+}

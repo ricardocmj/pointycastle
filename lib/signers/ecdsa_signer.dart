@@ -129,6 +129,53 @@ class ECDSASigner implements Signer {
     return new ECSignature(r, s);
   }
 
+  Signature generateRecoverableSignature(Uint8List message) {
+    message = _hashMessageIfNeeded(message);
+
+    var n = _pvkey.parameters.n;
+    var e = _calculateE(n, message);
+    var r = null;
+    var s = null;
+    var v = null;
+    var _2 = BigInt.from(2);
+
+    var kCalculator;
+    if (_kMac != null) {
+      kCalculator = new _RFC6979KCalculator(_kMac, n, _pvkey.d, message);
+    } else {
+      kCalculator = new _RandomKCalculator(n, _random);
+    }
+
+    // 5.3.2
+    do {
+      // generate s
+      var k = null;
+      var yOdd = null;
+
+      do {
+        // generate r
+        k = kCalculator.nextK();
+
+        var p = _pvkey.parameters.G * k;
+
+        // 5.3.3
+        var x = p.x.toBigInteger();
+        yOdd = p.y.toBigInteger() % _2;
+
+        r = x % n;
+      } while (r == BigInt.zero);
+
+      var d = _pvkey.d;
+
+      s = (k.modInverse(n) * (e + (d * r))) % n;
+
+      v = ( ( yOdd ).toInt() ^ (s * _2 < n ? 0 : 1));
+      s =  s * _2 < n ? s : n - s;
+    } while (s == BigInt.zero);
+
+    return new ECRecoverableSignature(r, s, v);
+  }
+
   bool verifySignature(Uint8List message, covariant ECSignature signature) {
     message = _hashMessageIfNeeded(message);
 
